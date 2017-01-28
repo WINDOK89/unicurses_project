@@ -1,0 +1,24 @@
+- modify in bios
+set password for authentification: Bodgi2011
+disable secure boot
+let uefi (strang behavior if intall in legacy mode
+
+- follow the step in the link:
+http://www.everydaylinuxuser.com/2015/11/how-to-install-ubuntu-linux-alongside.html
+
+- at the end of the installation, there won't be an option to continue testing, only reboot is possible
+
+- to get back in test mode, boot again on the key and enter test mode to follow the end of the procedure
+
+- might not be mandatory but we can try boot-repair tool method 2:
+https://help.ubuntu.com/community/Boot-Repair
+
+- if the computer start up still on windows:
+in bios:
+	set boot passwd
+	option below will become available
+	set some efi file as trusted
+	go to ubuntu and make two settings (grubs and shimx) give them name
+	reboot laptop and press f12
+	now the two trusted file are available, one of them will start ubuntu
+	back there use efi... cmd to put one of the 2 in front
