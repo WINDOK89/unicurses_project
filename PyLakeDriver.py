@@ -609,8 +609,8 @@ class PyLakeDriver():
 """in case the fileis executed"""
 if __name__ == "__main__":
     myLake = PyLakeDriver("wintell", "wintell347", "148.251.51.21", DefaultDir="wintell/SR4")
-    #a = myLake.browse_directory()
-    #print(a)
+    a = myLake.browse_directory()
+    print(a)
     """a=myLake.get_tag_list()
     print(a)"""
 
