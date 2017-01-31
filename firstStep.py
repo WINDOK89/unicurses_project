@@ -226,3 +226,27 @@ def main10():
 
 if __name__ == "__main__":
     main8()
+
+    BufFromApp = list("tag11")
+    cmd = "".join(BufFromApp)
+    cmdSplit = cmd.split(" :")
+    lastSection = cmdSplit[len(cmdSplit) - 1]
+    lret = []
+    for elt in ['test', 'tag11', 'tag11abc', 'tag2', 'tag2abc']:
+        if elt.startswith(lastSection):
+            lret.append(elt)
+    FinalLRet = []
+    if len(lret) > 1:
+        for i, letter in enumerate(list(lret[0])):
+            flag = True
+            for elt in lret:
+                if list(elt)[i] != letter:
+                    flag = False
+            if flag == True:
+                FinalLRet.append(letter)
+            else:
+                break
+    if len(FinalLRet) > len(lastSection):
+        print(["".join(FinalLRet)])
+    else:
+        print(lret)

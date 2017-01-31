@@ -60,7 +60,7 @@ def get_utc_now(ReturnFormat="utc"):
         return datetime.datetime.utcnow()
 
     elif ReturnFormat == "string":
-        return str(datetime.datetime.utcnow())
+        return str(datetime.datetime.utcnow())[:19]
 
     elif ReturnFormat == "utc":
         return time.mktime(datetime.datetime.utcnow().timetuple())
@@ -128,7 +128,7 @@ class PyLakeDriver():
     this class is a driver to connect and manage data on Data Maestro Lake historian
     """
 
-    def __init__(self, user, passwd, urlIp, DefaultDir="wintell/test/test2"):
+    def __init__(self, user, passwd, urlIp, DefaultDir="wintell/test/test2", timeout=5):
         """
         The constructor of the class
 
@@ -154,6 +154,7 @@ class PyLakeDriver():
         self.Session.auth = (user, passwd)
         self.UrlIp = "https://{}/tags/".format(urlIp)
         self.DefaultDir = DefaultDir
+        self.timeout=timeout
 
     def create_directory(self, DirName):
         """
@@ -169,7 +170,7 @@ class PyLakeDriver():
         try:
             parameter = {'directory': "wintell/{}".format(DirName)}
             url = "{}{}".format(self.UrlIp, "createTagDirectories/")
-            ReqResp = self.Session.get(url, verify=False, params=parameter)
+            ReqResp = self.Session.get(url, verify=False, params=parameter, timeout=self.timeout)
             if ReqResp.status_code != 200:
                 raise ValueError("error")
 
@@ -224,7 +225,7 @@ class PyLakeDriver():
             payload = [
                 {'name': TagName, 'type': TagType, 'unit': TagUnit, 'description': TagDescription, 'title': TagTitle}]
             url = "{}{}".format(self.UrlIp, "createTags/")
-            ReqResp = self.Session.post(url, params=parameter, data=json.dumps(payload), verify=False)
+            ReqResp = self.Session.post(url, params=parameter, data=json.dumps(payload), verify=False, timeout=self.timeout)
             if ReqResp.status_code != 200:
                 raise ValueError("error")
 
@@ -270,7 +271,7 @@ class PyLakeDriver():
 
             url = "{}{}".format(self.UrlIp, "addTagValue/")
             parameter = {'tag': "{}/{}".format(TagDir, TagName), 'time': InputTime, 'value': Value}
-            ReqResp = self.Session.get(url, verify=False, params=parameter)
+            ReqResp = self.Session.get(url, verify=False, params=parameter, timeout=self.timeout)
             if ReqResp.status_code != 200:
                 raise ValueError("error")
         except:
@@ -317,7 +318,7 @@ class PyLakeDriver():
                 payload.append([elt[0], [elt[1]]])
 
             parameter = {'tag': "{}/{}".format(TagDir, TagName)}
-            ReqResp = self.Session.post(url, data=json.dumps(payload), verify=False, params=parameter)
+            ReqResp = self.Session.post(url, data=json.dumps(payload), verify=False, params=parameter, timeout=self.timeout)
             if ReqResp.status_code != 200:
                 raise ValueError("error")
         except:
@@ -362,7 +363,7 @@ class PyLakeDriver():
 
             url = "{}{}".format(self.UrlIp, "getRawTagValues/")
             parameter = {'tag': "{}/{}".format(TagDir, TagName), 'startTime': StartTime, 'endTime': EndTime}
-            ReqResp = self.Session.get(url, verify=False, params=parameter)
+            ReqResp = self.Session.get(url, verify=False, params=parameter, timeout=self.timeout)
             if ReqResp.status_code != 200:
                 raise ValueError("error")
             RetList = []
@@ -398,7 +399,7 @@ class PyLakeDriver():
             payload = []
             for elt in TagNameList:
                 payload.append("{}/{}".format(TagDir, elt))
-            ReqResp = self.Session.post(url, data=json.dumps(payload), verify=False)
+            ReqResp = self.Session.post(url, data=json.dumps(payload), verify=False, timeout=self.timeout)
             if ReqResp.status_code != 200:
                 raise ValueError("error")
         except:
@@ -443,7 +444,7 @@ class PyLakeDriver():
                 payload.append("{}/{}".format(TagDir, elt))
 
             url = "{}{}".format(self.UrlIp, "truncateTags/")
-            ReqResp = self.Session.post(url, params=parameter, data=json.dumps(payload), verify=False)
+            ReqResp = self.Session.post(url, params=parameter, data=json.dumps(payload), verify=False, timeout=self.timeout)
             if ReqResp.status_code != 200:
                 raise ValueError("error")
         except:
@@ -472,7 +473,7 @@ class PyLakeDriver():
 
             parameter = {'tagDirectory': TagDir}
             url = "{}{}".format(self.UrlIp, "getTags/")
-            ReqResp = self.Session.get(url, verify=False, params=parameter)
+            ReqResp = self.Session.get(url, verify=False, params=parameter, timeout=self.timeout)
             if ReqResp.status_code != 200:
                 raise ValueError("error")
             ReturnList = []
@@ -502,7 +503,7 @@ class PyLakeDriver():
                 TagDir = TagDirParam
             parameter = {'tagDirectory': TagDir}
             url = "{}{}".format(self.UrlIp, "getTagDirectories/")
-            ReqResp = self.Session.get(url, verify=False, params=parameter)
+            ReqResp = self.Session.get(url, verify=False, params=parameter, timeout=self.timeout)
             if ReqResp.status_code != 200:
                 raise ValueError("error")
         except:
@@ -532,7 +533,7 @@ class PyLakeDriver():
 
             parameter = {'tag': "{}/{}".format(TagDir, TagName)}
             url = "{}{}".format(self.UrlIp, "getTagMetadatas/")
-            ReqResp = self.Session.get(url, verify=False, params=parameter)
+            ReqResp = self.Session.get(url, verify=False, params=parameter, timeout=self.timeout)
             if ReqResp.status_code != 200:
                 raise ValueError("error")
         except:
@@ -565,7 +566,7 @@ class PyLakeDriver():
                 payload.append("{}/{}".format(TagDir, elt))
 
             url = "{}{}".format(self.UrlIp, "getTagMetadatas/")
-            ReqResp = self.Session.post(url, data=json.dumps(payload), verify=False)
+            ReqResp = self.Session.post(url, data=json.dumps(payload), verify=False, timeout=self.timeout)
             if ReqResp.status_code != 200:
                 raise ValueError("error")
 
@@ -596,7 +597,7 @@ class PyLakeDriver():
 
             parameter = {'tagDirectory': TagDir}
             url = "{}{}".format(self.UrlIp, "browseTagDirectory/")
-            ReqResp = self.Session.get(url, verify=False, params=parameter)
+            ReqResp = self.Session.get(url, verify=False, params=parameter, timeout=self.timeout)
             if ReqResp.status_code != 200:
                 raise ValueError("error")
         except:
@@ -609,8 +610,8 @@ class PyLakeDriver():
 """in case the fileis executed"""
 if __name__ == "__main__":
     myLake = PyLakeDriver("wintell", "wintell347", "148.251.51.21", DefaultDir="wintell/SR4")
-    a = myLake.browse_directory()
-    print(a)
+    #a = myLake.get_tag_list()
+    #print(a)
     """a=myLake.get_tag_list()
     print(a)"""
 
@@ -628,7 +629,7 @@ if __name__ == "__main__":
     # print(a)
     # print(myLake.create_directory("SR4"))
     # print(myLake.create_tags("testag3",TagDirParam="wintell/test/",TagType="string", TagUnit="hz", TagDescription="frequence",TagTitle="tuj"))
-    # print(myLake.add_value("testag",72000,45, DefConFormat="utc"))
+    print(myLake.add_value("TagTempGearBox","2015-01-01 00:00:00",45))
     # print(myLake.add_values("testag",[[73000,25],[74000,26]], DefConFormat="utc"))
     # speed test --> result: 4,5 seconds for 100 requests
     # for i in range(100):
