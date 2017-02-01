@@ -103,13 +103,14 @@ class PyLakeClient(StandardTerminal):
             """reinitialize the quit request flag, so we can have quit enter choice again after quiting once"""
             self.ChoiceWindow.quitRequest = True
 
-            """get possibbility list"""
-            PosTag, lastSection = self.TagMemory.get_next(self.Buffer)
+            """get possibbility list only on the part before the cursor"""
+            PosTag, lastSection = self.TagMemory.get_next(self.Buffer[:self.InputWindow.PosCur-len(self.InputWindow.message)])
 
             """if only 1, we display it in input window"""
             if len(PosTag) == 1:
-                self.Buffer = self.Buffer + list(PosTag[0])[len(lastSection):]
-                self.InputWindow.PosCur = len(self.InputWindow.message) + len(self.Buffer)
+                NewPositionCursor=len(self.InputWindow.message)+len(self.Buffer[:self.InputWindow.PosCur-len(self.InputWindow.message)] + list(PosTag[0])[len(lastSection):])
+                self.Buffer = self.Buffer[:self.InputWindow.PosCur-len(self.InputWindow.message)] + list(PosTag[0])[len(lastSection):] + self.Buffer[self.InputWindow.PosCur-len(self.InputWindow.message):]
+                self.InputWindow.PosCur = NewPositionCursor
 
                 """if more than 1 we show the panel with everything possible"""
             elif len(PosTag) > 1:
@@ -129,12 +130,13 @@ class PyLakeClient(StandardTerminal):
             self.DirChoiceWindow.quitRequest = True
 
             """get possibbility list"""
-            PosTag, lastSection = self.DirMemory.get_next(self.Buffer)
+            PosTag, lastSection = self.DirMemory.get_next(self.Buffer[:self.InputWindow.PosCur-len(self.InputWindow.message)])
 
             """if only 1, we display it in input window"""
             if len(PosTag) == 1:
-                self.Buffer = self.Buffer + list(PosTag[0])[len(lastSection):]
-                self.InputWindow.PosCur = len(self.InputWindow.message) + len(self.Buffer)
+                NewPositionCursor=len(self.InputWindow.message)+len(self.Buffer[:self.InputWindow.PosCur-len(self.InputWindow.message)] + list(PosTag[0])[len(lastSection):])
+                self.Buffer = self.Buffer[:self.InputWindow.PosCur-len(self.InputWindow.message)] + list(PosTag[0])[len(lastSection):] + self.Buffer[self.InputWindow.PosCur-len(self.InputWindow.message):]
+                self.InputWindow.PosCur = NewPositionCursor
 
                 """if more than 1 we show the panel with everything possible"""
             elif len(PosTag) > 1:
