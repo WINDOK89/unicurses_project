@@ -20,7 +20,7 @@ class StandardTerminal():
     This class gives the basic fct of one terminal, the frame, input window and display window
     the specific stuff and answer to cmd will have to be added
     """
-    def __init__(self, stdscr=None, InputWindow=None):
+    def __init__(self, stdscr=None, InputWindow=None, OutputWindow=None):
         """
         constructor
         :param stdscr: the main screen from main app
@@ -75,7 +75,10 @@ class StandardTerminal():
             self.InputWindow = InputWindow
 
         """output window, main display"""
-        self.OutputWindow = DisplayWindow(self.stdscr, self.InputWindow)
+        if OutputWindow==None:
+            self.OutputWindow = DisplayWindow(self.stdscr, self.InputWindow)
+        else:
+            self.OutputWindow=OutputWindow
 
         """start loop"""
         self.start_loop()

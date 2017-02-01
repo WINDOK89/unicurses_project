@@ -57,6 +57,9 @@ class PyLakeClient(StandardTerminal):
         """dir choice manager"""
         self.DirChoiceWindow = DisplayWindow(self.stdscr, self.InputWindow)
 
+        """output window"""
+        self.OutputWindow = DisplayWindow(self.stdscr, self.InputWindow)
+
         """call to inherit constructor"""
         StandardTerminal.__init__(self, stdscr=self.stdscr, InputWindow=self.InputWindow)
 
