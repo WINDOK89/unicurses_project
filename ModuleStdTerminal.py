@@ -92,6 +92,7 @@ class StandardTerminal():
     def manage_buffer(self, key):
         """
         this function gives the basics to manage buffer
+        if user wants to add special fct, he will have to contition the execution of te inherit method
         :param key: the char entered by user
         :return:
         """
@@ -155,71 +156,45 @@ class StandardTerminal():
             """avoid changing copy buffer"""
             self.cmdEnterFlag = False
 
-
         elif (key == KEY_BACKSPACE):
 
             """manage backspace"""
-            # check if len(buf) > 0 to avoid li[-1]
+            """erase the caracter and chnage cursor pos"""
             if (len(self.Buffer) > 0 and self.InputWindow.PosCur > len(self.InputWindow.message)):
                 del self.Buffer[self.InputWindow.PosCur - len(self.InputWindow.message) - 1]
                 self.InputWindow.PosCur -= 1
 
         elif (key == KEY_LEFT):
+
+            """go left and change cursor position"""
             if (self.InputWindow.PosCur > self.InputWindow.BufStart):
                 self.InputWindow.PosCur -= 1
 
         elif (key == KEY_RIGHT):
+
+            """go right and change cursor position"""
             if (len(self.Buffer) + len(self.InputWindow.message) > self.InputWindow.PosCur):
                 self.InputWindow.PosCur += 1
 
-        elif (key == KEY_UP):
-            pass
-
         elif (key == 330):
+
+            """manage delete key"""
             if ((self.InputWindow.PosCur - len(self.InputWindow.message) < len(self.Buffer))):
                 del self.Buffer[self.InputWindow.PosCur - len(self.InputWindow.message)]
 
-        elif (key == 9):
-            """reinitialize the quit request flag"""
-            self.ChoiceWindow.quitRequest=True
-
-            PosTag, lastSection=self.TagMemory.get_next(self.Buffer)
-            if len(PosTag)==1:
-                self.Buffer=self.Buffer+list(PosTag[0])[len(lastSection):]
-                self.InputWindow.PosCur = len(self.InputWindow.message) + len(self.Buffer)
-            elif len(PosTag)>1:
-                self.ChoiceWindow.clear_display()
-                top_panel(self.ChoiceWindow.panel)
-                bottom_panel(self.OutputWindow.panel)
-                bottom_panel(self.DirChoiceWindow.panel)
-                for elt in PosTag:
-                    self.ChoiceWindow.add_text(" --> {}".format(elt),color=7, attribute=A_REVERSE)
-                self.ChoiceWindow.show_changes()
-            else:
-                pass
-
-        elif (key == KEY_BTAB):
-            """reinitialize the quit request flag"""
-            self.ChoiceWindow.quitRequest = True
-
-            PosTag, lastSection = self.DirMemory.get_next(self.Buffer)
-            if len(PosTag) == 1:
-                self.Buffer = self.Buffer + list(PosTag[0])[len(lastSection):]
-                self.InputWindow.PosCur = len(self.InputWindow.message) + len(self.Buffer)
-            elif len(PosTag) > 1:
-                self.DirChoiceWindow.clear_display()
-                top_panel(self.DirChoiceWindow.panel)
-                bottom_panel(self.OutputWindow.panel)
-                bottom_panel(self.ChoiceWindow.panel)
-                for elt in PosTag:
-                    self.DirChoiceWindow.add_text(" --> {}".format(elt), color=8, attribute=A_REVERSE)
-                self.DirChoiceWindow.show_changes()
-            else:
-                pass
-
         else:
+            """allowed character in buffer"""
             self.Buffer.insert(self.InputWindow.PosCur - len(self.InputWindow.message), chr(key))
             self.InputWindow.PosCur += 1
+
+    def cmd_manager(self):
+        """
+        this function has to be redifined in the dev app, response of the program to different user input
+        :return:
+        """
+
+        pass
+
 
 
 class DisplayWindow():
