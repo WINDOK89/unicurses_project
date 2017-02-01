@@ -383,7 +383,7 @@ class PyLakeClient():
 
         elif (key == KEY_BTAB):
             """reinitialize the quit request flag"""
-            self.ChoiceWindow.quitRequest = True
+            self.DirChoiceWindow.quitRequest = True
 
             PosTag, lastSection = self.DirMemory.get_next(self.Buffer)
             if len(PosTag) == 1:
