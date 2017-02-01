@@ -40,6 +40,7 @@ class PyLakeClient(StandardTerminal):
 
         """init main screen"""
         self.stdscr = initscr()
+        mvaddstr(1, 0, " dfdqsdqfdqfqdf  ")
 
         """cmd window init"""
         self.InputWindow = CmdWindow(self.stdscr)

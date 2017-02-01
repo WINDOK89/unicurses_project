@@ -36,6 +36,8 @@ class StandardTerminal():
         start_color()
         color_init()
 
+        #bkgd(' ', color_pair(1))
+
         """allow special key"""
         """super critical, this will enable arrow key to be equal to KEY_LEFT,.."""
         keypad(self.stdscr, True)
