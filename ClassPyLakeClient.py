@@ -126,7 +126,7 @@ class PyLakeClient(StandardTerminal):
                 pass
 
         elif (key == KEY_BTAB):
-            """reinitialize the quit request flag, so we can have quit enter choice again after quiting once"""
+            """initialize the quit flag so we can use the menu again"""
             self.DirChoiceWindow.quitRequest = True
 
             """get possibbility list"""
