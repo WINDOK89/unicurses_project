@@ -1,0 +1,16 @@
+#in constructor
+
+"""get PyLakeDDriver connection"""
+self.MyLake = PyLakeDriver("wintell", "wintell347", "148.251.51.21", DefaultDir="wintell/SR4")
+
+"""set memory for tag"""
+self.TagMemory = TagMemory(self.MyLake.browse_directory())
+self.DirMemory = DirMemory(self.MyLake.get_tag_directories())
+
+"""tag choice window have to be before output window so we see output windows"""
+self.ChoiceWindow = DisplayWindow(self.stdscr, self.InputWindow)
+
+"""Dir choice window have to be before output window so we see output windows"""
+self.DirChoiceWindow = DisplayWindow(self.stdscr, self.InputWindow)
+
+"""redefine start loop

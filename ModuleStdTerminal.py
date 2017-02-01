@@ -1,5 +1,5 @@
 from unicurses import *
-
+from PyLakeDriver import *
 
 def color_init():
     """
@@ -14,6 +14,80 @@ def color_init():
     init_pair(6, COLOR_GREEN, COLOR_BLACK)
     init_pair(7, COLOR_RED, COLOR_WHITE)
     init_pair(8, COLOR_BLUE, COLOR_WHITE)
+
+
+class StandardTerminal():
+    """
+    This class gives the basic fct of one terminal, the frame, input window and display window
+    the specific stuff and answer to cmd will have to be added
+    """
+    def __init__(self):
+        """
+        the constructor
+        """
+
+        """get main screen"""
+        self.stdscr = initscr()
+
+        """color init"""
+        start_color()
+        color_init()
+
+        """allow special key"""
+        """super critical, this will enable arrow key to be equal to KEY_LEFT,.."""
+        keypad(self.stdscr, True)
+
+        """get max dim"""
+        self.MaxX = getmaxyx(self.stdscr)[1] - 1
+        self.MaxY = getmaxyx(self.stdscr)[0] - 1
+
+        """set cmd memory and cursor of this memory"""
+        self.cmdMemory = []
+        self.cmdMemoryIndex = 0
+
+        """this flag is used to keep or not the current buffer inmemory so when we go in memory we can go back to init typed in"""
+        self.cmdEnterFlag = True
+
+        """init buffer and cmd"""
+        self.Buffer = []
+        self.copyBuffer = []   # used for cmd memory
+        self.cmd = ""
+
+        """draw  separtion line between content and command and margin"""
+        move(self.MaxY - 2, 2)
+        hline(ACS_HLINE, self.MaxX - 2)
+        move(self.MaxY, 2)
+        hline(ACS_HLINE, self.MaxX - 2)
+        move(1, 2)
+        hline(ACS_HLINE, self.MaxX - 2)
+        move(1, 1)
+        vline(ACS_VLINE, self.MaxY)
+        move(1, self.MaxX - 1)
+        vline(ACS_VLINE, self.MaxY)
+
+        """cmd window init"""
+        self.InputWindow = CmdWindow(self.stdscr)
+
+        """output window, main display"""
+        self.OutputWindow = DisplayWindow(self.stdscr, self.InputWindow)
+
+        """start loop"""
+        self.start_loop()
+
+        """terminate app if loop over"""
+        endwin()
+
+    def start_loop(self):
+        """
+        this function will start a loop
+        but it will be often overwrite if we want to put external info in message
+        :return:
+        """
+        while (self.cmd != "quit"):
+            key = self.InputWindow.get_char(message=" cmd # Terminal >> ", buf="".join(self.Buffer))
+            self.manage_buffer(key)
+            mvaddstr(0, 0, "   ")
+            mvaddstr(0, 0, str(key))
 
 
 class DisplayWindow():
