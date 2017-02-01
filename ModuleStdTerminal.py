@@ -371,6 +371,8 @@ class DirMemory():
 
         """we insulate the ssection where we want to add a possibility"""
         lastSection = cmdSplit[len(cmdSplit) - 1]
+        lastSectionSplit=lastSection.split("'")
+        lastSection = lastSectionSplit[len(lastSectionSplit) - 1]
 
         """initialisation of lret (list of all reduced posisbilities"""
         lret = []
