@@ -20,17 +20,14 @@ class StandardTerminal():
     This class gives the basic fct of one terminal, the frame, input window and display window
     the specific stuff and answer to cmd will have to be added
     """
-    def __init__(self, stdscr=None, InputWindow=None, OutputWindow=None):
+    def __init__(self):
         """
         constructor
         :param stdscr: the main screen from main app
         """
 
         """get main screen"""
-        if stdscr==None:
-            self.stdscr=initscr()
-        else:
-            self.stdscr = stdscr
+        self.stdscr=initscr()
 
         """color init"""
         start_color()
@@ -69,16 +66,10 @@ class StandardTerminal():
         vline(ACS_VLINE, self.MaxY)
 
         """cmd window init"""
-        if InputWindow==None:
-            self.InputWindow = CmdWindow(self.stdscr)
-        else:
-            self.InputWindow = InputWindow
+        self.InputWindow = CmdWindow(self.stdscr)
 
         """output window, main display"""
-        if OutputWindow==None:
-            self.OutputWindow = DisplayWindow(self.stdscr, self.InputWindow)
-        else:
-            self.OutputWindow=OutputWindow
+        self.OutputWindow = DisplayWindow(self.stdscr, self.InputWindow)
 
     def start_loop(self):
         """
