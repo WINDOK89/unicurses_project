@@ -3,229 +3,33 @@ import ast
 
 from unicurses import *
 from PyLakeDriver import *
+from ModuleStdTerminal import *
 import csv
 
-
-def color_init():
-    init_pair(1, COLOR_WHITE, COLOR_BLACK)
-    init_pair(2, COLOR_RED, COLOR_BLACK)
-    init_pair(3, COLOR_CYAN, COLOR_BLACK)
-    init_pair(4, COLOR_RED, COLOR_CYAN)
-    init_pair(5, COLOR_YELLOW, COLOR_BLACK)
-    init_pair(6, COLOR_GREEN, COLOR_BLACK)
-    init_pair(7, COLOR_RED, COLOR_WHITE)
-    init_pair(8, COLOR_BLUE, COLOR_WHITE)
-
-
-class DisplayWindow():
-    def __init__(self, stdscr, cmdscr, WinType="Primary"):
-        self.max_x = stdscr.getmaxyx()[1] - 1
-        self.max_y = stdscr.getmaxyx()[0] - 1
-        self.Xlength = self.max_x - 3
-        self.Ylength = self.max_y - 5
-
-        del stdscr
-
-        """if display window"""
-        if WinType=="Primary":
-            self.window = newwin(self.max_y - 5, self.max_x - 3, 2, 2)
-
-        self.cmdscr = cmdscr
-
-        self.panel = new_panel(self.window)
-
-        self.Xpos = 0
-        self.Ypos = 0
-
-        self.quitRequest=True
-
-        self.show_changes()
-
-    def clear_display(self):
-        wclear(self.window)
-        self.Ypos = 0
-        self.Xpos = 0
-
-    def add_line(self, message, attribute=A_NORMAL, color=1):
-        waddstr(self.window, message, color_pair(color)+attribute)
-
-        """we takes the new position"""
-        NewX = getyx(self.window)[1]
-        NewY = getyx(self.window)[0]
-
-        """we set the new position and update"""
-        self.Xpos = 0
-        self.Ypos = NewY + 1
-        self.show_changes()
-
-    def add_text(self, message, color=1, attribute=A_NORMAL):
-
-        """set the positioon like it should be"""
-        wmove(self.window, self.Ypos, self.Xpos)
-
-        """if thee new position is out of range, wee don't upgrade, if not, we upgrade"""
-        if int(len(message) / self.Xlength) + self.Ypos > self.Ylength - 1:
-            Finished = True
-            while (Finished and self.quitRequest):
-                """we request the cmd to stop or update"""
-                key = self.cmdscr.get_char(message=" 'q' for quit, 'enter' for next >> ", buf="")
-
-                if (chr(key) == 'q'):
-                    """quit loop without update"""
-                    self.cmdscr.PosCur = -1
-                    self.quitRequest=False
-
-
-                if (key == 10):
-                    """update"""
-                    wclear(self.window)
-                    self.Xpos = 0
-                    self.Ypos = 0
-
-                    """we try to add the message"""
-                    self.add_line(message, attribute=attribute, color=color)
-
-                    """finished loop"""
-                    Finished = False
-                    self.cmdscr.PosCur = -1
-
-
-        else:
-            """we try to add the message"""
-            self.add_line(message, attribute=attribute, color=color)
-
-    def show_changes(self):
-        update_panels()
-        doupdate()
-
-
-class CmdWindow():
-    def __init__(self, stdscr):
-        self.max_x = stdscr.getmaxyx()[1] - 1
-        self.max_y = stdscr.getmaxyx()[0] - 1
-        del stdscr
-
-        self.window = newwin(1, self.max_x - 5, self.max_y - 1, 2)
-        self.panel = new_panel(self.window)
-
-        """super critical, this will enable arrow key to be equal to KEY_LEFT,.."""
-        keypad(self.window, True)
-
-        """to know where start the buf"""
-        self.BufStart = 0
-
-        """to know if the cursor position has to change"""
-        self.PosCur = -1
-
-        """keep track of the message"""
-        self.message = ""
-
-        """show window"""
-        self.show_changes()
-
-    def get_char(self, message=" Enter a command >> ", buf=""):
-
-        """ask for the command"""
-        wmove(self.window, 0, 0)
-        waddstr(self.window, message, color_pair(2) + A_BOLD)
-
-        """keep track of the message"""
-        self.message = message
-
-        """keep track of buffer position"""
-        self.BufStart = len(message)
-
-        """add the buffer"""
-        waddstr(self.window, buf, color_pair(5) + A_BOLD)
-
-        """show changes in sub window"""
-        self.show_changes()
-
-        """cursor managemment"""
-        if (self.PosCur == -1):
-            pass
-        else:
-            wmove(self.window, 0, self.PosCur)
-
-        """get cursor position before clear"""
-        self.PosCur = getyx(self.window)[1]
-
-        """request character"""
-        cmd = wgetch(self.window)
-
-        """clear full content"""
-        wclear(self.window)
-
-        """return command"""
-        return cmd
-
-    def show_changes(self):
-        update_panels()
-        doupdate()
-
-class TagMemory():
+class TagMemory(DirMemory):
+    """
+    This class is inheriting from DirMemory because the input is not directly a list but a dictionnary
+    we will loop over the dict to create the list first, before calling the constructor
+    The end purpose is to give tag name possibility with key tab
+    """
     def __init__(self, dic):
-        self.TagNameList=[]
+        """
+        the constructor
+        :param dic: the dict containing what we need
+        """
+
+        """The final tag name list initialisation"""
+        TagNameList=[]
+
+        """the dic is coming from pylakedriver fct which return false if a problem happens"""
         if dic != False:
+
+            """we take the tag names from the dic and add it to tag possibility list"""
             for IL1 in dic.values():
-                self.TagNameList.append(IL1['name'])
+                TagNameList.append(IL1['name'])
 
-    def get_next(self, BufFromApp):
-        cmd = "".join(BufFromApp)
-        cmdSplit = cmd.split(" :")
-        lastSection = cmdSplit[len(cmdSplit) - 1]
-        lret = []
-        for elt in self.TagNameList:
-            if elt.startswith(lastSection):
-                lret.append(elt)
-        FinalLRet = []
-        if len(lret) > 1:
-            for i, letter in enumerate(list(lret[0])):
-                flag = True
-                for elt in lret:
-                    if list(elt)[i] != letter:
-                        flag = False
-                if flag == True:
-                    FinalLRet.append(letter)
-                else:
-                    break
-
-        if len(FinalLRet) > len(lastSection):
-            return ["".join(FinalLRet)], lastSection
-        else:
-            return lret, lastSection
-
-class DirMemory():
-    def __init__(self, DirList):
-        self.DirNameList=DirList
-
-    def get_next(self, BufFromApp):
-        cmd = "".join(BufFromApp)
-        cmdSplit = cmd.split(" :")
-        lastSection = cmdSplit[len(cmdSplit) - 1]
-        lret = []
-        for elt in self.DirNameList:
-            if elt.startswith(lastSection):
-                lret.append(elt)
-        FinalLRet = []
-        if len(lret) > 1:
-            for i, letter in enumerate(list(lret[0])):
-                flag = True
-                for elt in lret:
-                    if list(elt)[i] != letter:
-                        flag = False
-                if flag == True:
-                    FinalLRet.append(letter)
-                else:
-                    break
-
-        if len(FinalLRet) > len(lastSection):
-            return ["".join(FinalLRet)], lastSection
-        else:
-            return lret, lastSection
-
-
-
+        """now all condition are ok to call DirMemory constructor passing a list and not a dict"""
+        DirMemory.__init__(self,TagNameList)
 
 
 class PyLakeClient():
@@ -375,6 +179,7 @@ class PyLakeClient():
                 self.ChoiceWindow.clear_display()
                 top_panel(self.ChoiceWindow.panel)
                 bottom_panel(self.OutputWindow.panel)
+                bottom_panel(self.DirChoiceWindow.panel)
                 for elt in PosTag:
                     self.ChoiceWindow.add_text(" --> {}".format(elt),color=7, attribute=A_REVERSE)
                 self.ChoiceWindow.show_changes()
