@@ -290,6 +290,9 @@ class DisplayWindow():
             """if we need too much lines, we set this flag to start the loop"""
             Finished = True
 
+            """keep position cursor"""
+            SaveCurPos=self.cmdscr.PosCur
+
             """start loop decision (quit or next)"""
             """two condition to have the loop running"""
             while (Finished and self.quitRequest):
@@ -318,6 +321,9 @@ class DisplayWindow():
 
                     """set cmd window cursor back to start"""
                     self.cmdscr.PosCur = -1
+
+            """give back curpos"""
+            self.cmdscr.PosCur=SaveCurPos
 
 
         else:
