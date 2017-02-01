@@ -1,5 +1,4 @@
 from unicurses import *
-from PyLakeDriver import *
 
 def color_init():
     """
@@ -21,13 +20,17 @@ class StandardTerminal():
     This class gives the basic fct of one terminal, the frame, input window and display window
     the specific stuff and answer to cmd will have to be added
     """
-    def __init__(self):
+    def __init__(self, stdscr=None, InputWindow=None):
         """
-        the constructor
+        constructor
+        :param stdscr: the main screen from main app
         """
 
         """get main screen"""
-        self.stdscr = initscr()
+        if stdscr==None:
+            self.stdscr=initscr()
+        else:
+            self.stdscr = stdscr
 
         """color init"""
         start_color()
@@ -66,7 +69,10 @@ class StandardTerminal():
         vline(ACS_VLINE, self.MaxY)
 
         """cmd window init"""
-        self.InputWindow = CmdWindow(self.stdscr)
+        if InputWindow==None:
+            self.InputWindow = CmdWindow(self.stdscr)
+        else:
+            self.InputWindow = InputWindow
 
         """output window, main display"""
         self.OutputWindow = DisplayWindow(self.stdscr, self.InputWindow)
