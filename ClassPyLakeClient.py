@@ -14,6 +14,7 @@ def color_init():
     init_pair(5, COLOR_YELLOW, COLOR_BLACK)
     init_pair(6, COLOR_GREEN, COLOR_BLACK)
     init_pair(7, COLOR_RED, COLOR_WHITE)
+    init_pair(8, COLOR_BLUE, COLOR_WHITE)
 
 
 class DisplayWindow():
@@ -194,6 +195,35 @@ class TagMemory():
         else:
             return lret, lastSection
 
+class DirMemory():
+    def __init__(self, DirList):
+        self.DirNameList=DirList
+
+    def get_next(self, BufFromApp):
+        cmd = "".join(BufFromApp)
+        cmdSplit = cmd.split(" :")
+        lastSection = cmdSplit[len(cmdSplit) - 1]
+        lret = []
+        for elt in self.DirNameList:
+            if elt.startswith(lastSection):
+                lret.append(elt)
+        FinalLRet = []
+        if len(lret) > 1:
+            for i, letter in enumerate(list(lret[0])):
+                flag = True
+                for elt in lret:
+                    if list(elt)[i] != letter:
+                        flag = False
+                if flag == True:
+                    FinalLRet.append(letter)
+                else:
+                    break
+
+        if len(FinalLRet) > len(lastSection):
+            return ["".join(FinalLRet)], lastSection
+        else:
+            return lret, lastSection
+
 
 
 
@@ -231,6 +261,7 @@ class PyLakeClient():
 
         """set memory for tag"""
         self.TagMemory=TagMemory(self.MyLake.browse_directory())
+        self.DirMemory=DirMemory(self.MyLake.get_tag_directories())
 
         """set memory for directories"""
 
@@ -249,6 +280,7 @@ class PyLakeClient():
         """cmd window"""
         self.InputWindow = CmdWindow(self.stdscr)
         self.ChoiceWindow = DisplayWindow(self.stdscr, self.InputWindow)
+        self.DirChoiceWindow = DisplayWindow(self.stdscr, self.InputWindow)
         self.OutputWindow = DisplayWindow(self.stdscr, self.InputWindow)
 
 
@@ -268,6 +300,7 @@ class PyLakeClient():
         """to displlay at top display screen"""
         top_panel(self.OutputWindow.panel)
         bottom_panel(self.ChoiceWindow.panel)
+        bottom_panel(self.DirChoiceWindow.panel)
         self.OutputWindow.show_changes()
 
         """copy buffer if we are not select memory"""
@@ -349,7 +382,23 @@ class PyLakeClient():
                 pass
 
         elif (key == KEY_BTAB):
-            pass
+            """reinitialize the quit request flag"""
+            self.ChoiceWindow.quitRequest = True
+
+            PosTag, lastSection = self.DirMemory.get_next(self.Buffer)
+            if len(PosTag) == 1:
+                self.Buffer = self.Buffer + list(PosTag[0])[len(lastSection):]
+                self.InputWindow.PosCur = len(self.InputWindow.message) + len(self.Buffer)
+            elif len(PosTag) > 1:
+                self.DirChoiceWindow.clear_display()
+                top_panel(self.DirChoiceWindow.panel)
+                bottom_panel(self.OutputWindow.panel)
+                bottom_panel(self.ChoiceWindow.panel)
+                for elt in PosTag:
+                    self.DirChoiceWindow.add_text(" --> {}".format(elt), color=8, attribute=A_REVERSE)
+                self.DirChoiceWindow.show_changes()
+            else:
+                pass
 
         else:
             self.Buffer.insert(self.InputWindow.PosCur - len(self.InputWindow.message), chr(key))
@@ -859,12 +908,17 @@ class PyLakeClient():
             """to allow again the display object to run"""
             self.OutputWindow.quitRequest = True
 
+            """to update tagmemory"""
+            self.DirMemory = DirMemory(self.MyLake.get_tag_directories())
+
         else:
             self.OutputWindow.clear_display()
             self.OutputWindow.add_text("    !! WRONG FORMAT, CONSULT HELP !!", color=2)
 
             """to allow again the display object to run"""
             self.OutputWindow.quitRequest = True
+
+
 
 def string_to_list_tuple_dict(s):
     try:

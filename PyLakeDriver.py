@@ -168,7 +168,7 @@ class PyLakeDriver():
         """
 
         try:
-            parameter = {'directory': "wintell/{}".format(DirName)}
+            parameter = {'directory': DirName}
             url = "{}{}".format(self.UrlIp, "createTagDirectories/")
             ReqResp = self.Session.get(url, verify=False, params=parameter, timeout=self.timeout)
             if ReqResp.status_code != 200:
