@@ -1,260 +1,46 @@
 # -*- coding: utf-8 -*-
 import ast
-
 from unicurses import *
 from PyLakeDriver import *
-import csv
+from ModuleStdTerminal import *
 
-
-def color_init():
-    init_pair(1, COLOR_WHITE, COLOR_BLACK)
-    init_pair(2, COLOR_RED, COLOR_BLACK)
-    init_pair(3, COLOR_CYAN, COLOR_BLACK)
-    init_pair(4, COLOR_RED, COLOR_CYAN)
-    init_pair(5, COLOR_YELLOW, COLOR_BLACK)
-    init_pair(6, COLOR_GREEN, COLOR_BLACK)
-    init_pair(7, COLOR_RED, COLOR_WHITE)
-    init_pair(8, COLOR_BLUE, COLOR_WHITE)
-
-
-class DisplayWindow():
-    def __init__(self, stdscr, cmdscr, WinType="Primary"):
-        self.max_x = stdscr.getmaxyx()[1] - 1
-        self.max_y = stdscr.getmaxyx()[0] - 1
-        self.Xlength = self.max_x - 3
-        self.Ylength = self.max_y - 5
-
-        del stdscr
-
-        """if display window"""
-        if WinType=="Primary":
-            self.window = newwin(self.max_y - 5, self.max_x - 3, 2, 2)
-
-        self.cmdscr = cmdscr
-
-        self.panel = new_panel(self.window)
-
-        self.Xpos = 0
-        self.Ypos = 0
-
-        self.quitRequest=True
-
-        self.show_changes()
-
-    def clear_display(self):
-        wclear(self.window)
-        self.Ypos = 0
-        self.Xpos = 0
-
-    def add_line(self, message, attribute=A_NORMAL, color=1):
-        waddstr(self.window, message, color_pair(color)+attribute)
-
-        """we takes the new position"""
-        NewX = getyx(self.window)[1]
-        NewY = getyx(self.window)[0]
-
-        """we set the new position and update"""
-        self.Xpos = 0
-        self.Ypos = NewY + 1
-        self.show_changes()
-
-    def add_text(self, message, color=1, attribute=A_NORMAL):
-
-        """set the positioon like it should be"""
-        wmove(self.window, self.Ypos, self.Xpos)
-
-        """if thee new position is out of range, wee don't upgrade, if not, we upgrade"""
-        if int(len(message) / self.Xlength) + self.Ypos > self.Ylength - 1:
-            Finished = True
-            while (Finished and self.quitRequest):
-                """we request the cmd to stop or update"""
-                key = self.cmdscr.get_char(message=" 'q' for quit, 'enter' for next >> ", buf="")
-
-                if (chr(key) == 'q'):
-                    """quit loop without update"""
-                    self.cmdscr.PosCur = -1
-                    self.quitRequest=False
-
-
-                if (key == 10):
-                    """update"""
-                    wclear(self.window)
-                    self.Xpos = 0
-                    self.Ypos = 0
-
-                    """we try to add the message"""
-                    self.add_line(message, attribute=attribute, color=color)
-
-                    """finished loop"""
-                    Finished = False
-                    self.cmdscr.PosCur = -1
-
-
-        else:
-            """we try to add the message"""
-            self.add_line(message, attribute=attribute, color=color)
-
-    def show_changes(self):
-        update_panels()
-        doupdate()
-
-
-class CmdWindow():
-    def __init__(self, stdscr):
-        self.max_x = stdscr.getmaxyx()[1] - 1
-        self.max_y = stdscr.getmaxyx()[0] - 1
-        del stdscr
-
-        self.window = newwin(1, self.max_x - 5, self.max_y - 1, 2)
-        self.panel = new_panel(self.window)
-
-        """super critical, this will enable arrow key to be equal to KEY_LEFT,.."""
-        keypad(self.window, True)
-
-        """to know where start the buf"""
-        self.BufStart = 0
-
-        """to know if the cursor position has to change"""
-        self.PosCur = -1
-
-        """keep track of the message"""
-        self.message = ""
-
-        """show window"""
-        self.show_changes()
-
-    def get_char(self, message=" Enter a command >> ", buf=""):
-
-        """ask for the command"""
-        wmove(self.window, 0, 0)
-        waddstr(self.window, message, color_pair(2) + A_BOLD)
-
-        """keep track of the message"""
-        self.message = message
-
-        """keep track of buffer position"""
-        self.BufStart = len(message)
-
-        """add the buffer"""
-        waddstr(self.window, buf, color_pair(5) + A_BOLD)
-
-        """show changes in sub window"""
-        self.show_changes()
-
-        """cursor managemment"""
-        if (self.PosCur == -1):
-            pass
-        else:
-            wmove(self.window, 0, self.PosCur)
-
-        """get cursor position before clear"""
-        self.PosCur = getyx(self.window)[1]
-
-        """request character"""
-        cmd = wgetch(self.window)
-
-        """clear full content"""
-        wclear(self.window)
-
-        """return command"""
-        return cmd
-
-    def show_changes(self):
-        update_panels()
-        doupdate()
-
-class TagMemory():
+class TagMemory(DirMemory):
+    """
+    This class is inheriting from DirMemory because the input is not directly a list but a dictionnary
+    we will loop over the dict to create the list first, before calling the constructor
+    The end purpose is to give tag name possibility with key tab
+    """
     def __init__(self, dic):
-        self.TagNameList=[]
+        """
+        the constructor
+        :param dic: the dict containing what we need
+        """
+
+        """The final tag name list initialisation"""
+        TagNameList=[]
+
+        """the dic is coming from pylakedriver fct which return false if a problem happens"""
         if dic != False:
+
+            """we take the tag names from the dic and add it to tag possibility list"""
             for IL1 in dic.values():
-                self.TagNameList.append(IL1['name'])
+                TagNameList.append(IL1['name'])
 
-    def get_next(self, BufFromApp):
-        cmd = "".join(BufFromApp)
-        cmdSplit = cmd.split(" :")
-        lastSection = cmdSplit[len(cmdSplit) - 1]
-        lret = []
-        for elt in self.TagNameList:
-            if elt.startswith(lastSection):
-                lret.append(elt)
-        FinalLRet = []
-        if len(lret) > 1:
-            for i, letter in enumerate(list(lret[0])):
-                flag = True
-                for elt in lret:
-                    if list(elt)[i] != letter:
-                        flag = False
-                if flag == True:
-                    FinalLRet.append(letter)
-                else:
-                    break
-
-        if len(FinalLRet) > len(lastSection):
-            return ["".join(FinalLRet)], lastSection
-        else:
-            return lret, lastSection
-
-class DirMemory():
-    def __init__(self, DirList):
-        self.DirNameList=DirList
-
-    def get_next(self, BufFromApp):
-        cmd = "".join(BufFromApp)
-        cmdSplit = cmd.split(" :")
-        lastSection = cmdSplit[len(cmdSplit) - 1]
-        lret = []
-        for elt in self.DirNameList:
-            if elt.startswith(lastSection):
-                lret.append(elt)
-        FinalLRet = []
-        if len(lret) > 1:
-            for i, letter in enumerate(list(lret[0])):
-                flag = True
-                for elt in lret:
-                    if list(elt)[i] != letter:
-                        flag = False
-                if flag == True:
-                    FinalLRet.append(letter)
-                else:
-                    break
-
-        if len(FinalLRet) > len(lastSection):
-            return ["".join(FinalLRet)], lastSection
-        else:
-            return lret, lastSection
+        """now all condition are ok to call DirMemory constructor passing a list and not a dict"""
+        DirMemory.__init__(self,TagNameList)
 
 
-
-
-
-class PyLakeClient():
+class PyLakeClient(StandardTerminal):
+    """
+    inherit from Standard terminal, only the function are added to it
+    """
     def __init__(self):
+        """
+        contructor, we start first with specific variable of child class
+        """
 
-        """intialization"""
-        self.stdscr = initscr()
-
-        """color init"""
-        start_color()
-        color_init()
-
-        """allow special keey"""
-        """super critical, this will enable arrow key to be equal to KEY_LEFT,.."""
-        keypad(self.stdscr, True)
-
-        """get max dim"""
-        self.MaxX = getmaxyx(self.stdscr)[1] - 1
-        self.MaxY = getmaxyx(self.stdscr)[0] - 1
-
-        """set cmd memory"""
-        self.cmdMemory=[]
-        self.cmdMemoryIndex=0
-        self.cmdEnterFlag=True
-
-        """init buffer and cmd"""
-        self.Buffer = []
-        self.copyBuffer = []
-        self.cmd = ""
+        """call to inherit constructor"""
+        StandardTerminal.__init__(self)
 
         """get PyLakeDDriver connection"""
         self.MyLake=PyLakeDriver("wintell", "wintell347", "148.251.51.21", DefaultDir="wintell/SR4")
@@ -263,39 +49,48 @@ class PyLakeClient():
         self.TagMemory=TagMemory(self.MyLake.browse_directory())
         self.DirMemory=DirMemory(self.MyLake.get_tag_directories())
 
-        """set memory for directories"""
-
-        """draw  separtion line between content and command"""
-        move(self.MaxY - 2, 2)
-        hline(ACS_HLINE, self.MaxX - 2)
-        move(self.MaxY, 2)
-        hline(ACS_HLINE, self.MaxX - 2)
-        move(1, 2)
-        hline(ACS_HLINE, self.MaxX - 2)
-        move(1, 1)
-        vline(ACS_VLINE, self.MaxY)
-        move(1, self.MaxX - 1)
-        vline(ACS_VLINE, self.MaxY)
-
-        """cmd window"""
-        self.InputWindow = CmdWindow(self.stdscr)
+        """Tag choice manager"""
         self.ChoiceWindow = DisplayWindow(self.stdscr, self.InputWindow)
-        self.DirChoiceWindow = DisplayWindow(self.stdscr, self.InputWindow)
-        self.OutputWindow = DisplayWindow(self.stdscr, self.InputWindow)
 
+        """dir choice manager"""
+        self.DirChoiceWindow = DisplayWindow(self.stdscr, self.InputWindow)
+
+        """arrange element"""
+        top_panel(self.OutputWindow.panel)
+        #bottom_panel(self.ChoiceWindow.panel)
+        #bottom_panel(self.DirChoiceWindow.panel)
 
         """start loop"""
+        self.start_loop()
+
+    def start_loop(self):
+        """
+        redefinition of start loop to have the current directory in the cmd message
+        :return:
+        """
+
+        """keep going until the user enter quit"""
         while (self.cmd != "quit"):
+
+            """retrieve a key from keyboard"""
             key = self.InputWindow.get_char(message=" {} # Terminal >> ".format(self.MyLake.DefaultDir), buf="".join(self.Buffer))
+
+            """call overwritten manage_buffer"""
             self.manage_buffer(key)
+
+            """to remove in the end, no reason to saty after finish"""
             mvaddstr(0, 0, "   ")
             mvaddstr(0, 0, str(key))
 
-        """terminate app"""
+        """terminate app if loop over"""
         endwin()
 
     def manage_buffer(self, key):
-        """"""
+        """
+        overwrite inherit method to add some function (select tag and dir)
+        :param key: the input key given
+        :return:
+        """
 
         """to displlay at top display screen"""
         top_panel(self.OutputWindow.panel)
@@ -303,92 +98,47 @@ class PyLakeClient():
         bottom_panel(self.DirChoiceWindow.panel)
         self.OutputWindow.show_changes()
 
-        """copy buffer if we are not select memory"""
-        if self.cmdEnterFlag:
-            self.copyBuffer=self.Buffer
-        self.cmdEnterFlag=True
+        """manage key tab"""
+        if (key == 9):
+            """reinitialize the quit request flag, so we can have quit enter choice again after quiting once"""
+            self.ChoiceWindow.quitRequest = True
 
-        """check if enter pressed"""
-        if (key == 10):
-            self.cmd = "".join(self.Buffer)
-            if self.cmd=="":
-                pass
-            else:
-                self.cmdMemory.append(self.cmd)
-            self.cmdMemoryIndex = 0
-            self.Buffer = []
-            self.InputWindow.PosCur = -1
-            """manage cmd from here"""
-            self.cmd_manager()
+            """get possibbility list only on the part before the cursor"""
+            PosTag, lastSection = self.TagMemory.get_next(self.Buffer[:self.InputWindow.PosCur-len(self.InputWindow.message)])
 
-        elif (key == KEY_UP):
+            """if only 1, we display it in input window"""
+            if len(PosTag) == 1:
+                NewPositionCursor=len(self.InputWindow.message)+len(self.Buffer[:self.InputWindow.PosCur-len(self.InputWindow.message)] + list(PosTag[0])[len(lastSection):])
+                self.Buffer = self.Buffer[:self.InputWindow.PosCur-len(self.InputWindow.message)] + list(PosTag[0])[len(lastSection):] + self.Buffer[self.InputWindow.PosCur-len(self.InputWindow.message):]
+                self.InputWindow.PosCur = NewPositionCursor
 
-            if ((self.cmdMemoryIndex + 1) <= len(self.cmdMemory)) and (self.cmdMemoryIndex>=0) and len(self.cmdMemory) != 0:
-                self.cmdMemoryIndex += 1
-                self.Buffer = list(self.cmdMemory[len(self.cmdMemory)-self.cmdMemoryIndex])
-                self.InputWindow.PosCur = len(self.InputWindow.message)+len(self.Buffer)
-            self.cmdEnterFlag = False
-
-        elif (key == KEY_DOWN):
-
-            if (self.cmdMemoryIndex >= 1) and ((self.cmdMemoryIndex-1) < len(self.cmdMemory)) and len(self.cmdMemory) != 0:
-                self.cmdMemoryIndex -= 1
-                if self.cmdMemoryIndex==0:
-                    self.Buffer=self.copyBuffer
-                    self.InputWindow.PosCur = len(self.InputWindow.message) + len(self.Buffer)
-                else:
-                    self.Buffer = list(self.cmdMemory[len(self.cmdMemory)-self.cmdMemoryIndex])
-                    self.InputWindow.PosCur = len(self.InputWindow.message)+len(self.Buffer)
-            self.cmdEnterFlag = False
-
-
-        elif (key == KEY_BACKSPACE):  # check if backspace key pressed
-            # check if len(buf) > 0 to avoid li[-1]
-            if (len(self.Buffer) > 0 and self.InputWindow.PosCur > len(self.InputWindow.message)):
-                del self.Buffer[self.InputWindow.PosCur - len(self.InputWindow.message) - 1]
-                self.InputWindow.PosCur -= 1
-
-        elif (key == KEY_LEFT):
-            if (self.InputWindow.PosCur > self.InputWindow.BufStart):
-                self.InputWindow.PosCur -= 1
-
-        elif (key == KEY_RIGHT):
-            if (len(self.Buffer) + len(self.InputWindow.message) > self.InputWindow.PosCur):
-                self.InputWindow.PosCur += 1
-
-        elif (key == KEY_UP):
-            pass
-
-        elif (key == 330):
-            if ((self.InputWindow.PosCur - len(self.InputWindow.message) < len(self.Buffer))):
-                del self.Buffer[self.InputWindow.PosCur - len(self.InputWindow.message)]
-
-        elif (key == 9):
-            """reinitialize the quit request flag"""
-            self.ChoiceWindow.quitRequest=True
-
-            PosTag, lastSection=self.TagMemory.get_next(self.Buffer)
-            if len(PosTag)==1:
-                self.Buffer=self.Buffer+list(PosTag[0])[len(lastSection):]
-                self.InputWindow.PosCur = len(self.InputWindow.message) + len(self.Buffer)
-            elif len(PosTag)>1:
+                """if more than 1 we show the panel with everything possible"""
+            elif len(PosTag) > 1:
                 self.ChoiceWindow.clear_display()
                 top_panel(self.ChoiceWindow.panel)
                 bottom_panel(self.OutputWindow.panel)
+                bottom_panel(self.DirChoiceWindow.panel)
                 for elt in PosTag:
-                    self.ChoiceWindow.add_text(" --> {}".format(elt),color=7, attribute=A_REVERSE)
+                    self.ChoiceWindow.add_text(" --> {}".format(elt), color=7, attribute=A_REVERSE)
                 self.ChoiceWindow.show_changes()
+
             else:
                 pass
 
         elif (key == KEY_BTAB):
-            """reinitialize the quit request flag"""
+            """initialize the quit flag so we can use the menu again"""
             self.DirChoiceWindow.quitRequest = True
 
-            PosTag, lastSection = self.DirMemory.get_next(self.Buffer)
+            """get possibbility list"""
+            PosTag, lastSection = self.DirMemory.get_next(self.Buffer[:self.InputWindow.PosCur-len(self.InputWindow.message)])
+
+            """if only 1, we display it in input window"""
             if len(PosTag) == 1:
-                self.Buffer = self.Buffer + list(PosTag[0])[len(lastSection):]
-                self.InputWindow.PosCur = len(self.InputWindow.message) + len(self.Buffer)
+                NewPositionCursor=len(self.InputWindow.message)+len(self.Buffer[:self.InputWindow.PosCur-len(self.InputWindow.message)] + list(PosTag[0])[len(lastSection):])
+                self.Buffer = self.Buffer[:self.InputWindow.PosCur-len(self.InputWindow.message)] + list(PosTag[0])[len(lastSection):] + self.Buffer[self.InputWindow.PosCur-len(self.InputWindow.message):]
+                self.InputWindow.PosCur = NewPositionCursor
+
+                """if more than 1 we show the panel with everything possible"""
             elif len(PosTag) > 1:
                 self.DirChoiceWindow.clear_display()
                 top_panel(self.DirChoiceWindow.panel)
@@ -397,24 +147,25 @@ class PyLakeClient():
                 for elt in PosTag:
                     self.DirChoiceWindow.add_text(" --> {}".format(elt), color=8, attribute=A_REVERSE)
                 self.DirChoiceWindow.show_changes()
+
             else:
                 pass
 
+            """now we manage all the otehr possibility by caller the inherit fct which will do that for us"""
         else:
-            self.Buffer.insert(self.InputWindow.PosCur - len(self.InputWindow.message), chr(key))
-            self.InputWindow.PosCur += 1
+            StandardTerminal.manage_buffer(self,key)
 
     def cmd_manager(self):
-
-        """"""
-
-        """get cmd list"""
-        cmdlist=self.cmd.split(" :")
+        """
+        The overwrttien fct will give all the reaction the program shell have on alll posiible commands
+        :return:
+        """
+        cmdlist = self.cmd.split(" :")
 
         """help menu"""
         if cmdlist[0] == "help":
             self.OutputWindow.clear_display()
-            self.OutputWindow.add_text("HELP CONTENT", color=2, attribute=A_BOLD+A_UNDERLINE)
+            self.OutputWindow.add_text("HELP CONTENT", color=2, attribute=A_BOLD + A_UNDERLINE)
             self.OutputWindow.add_text("")
             self.OutputWindow.add_text("cmd 'quit':", color=3, attribute=A_UNDERLINE)
             self.OutputWindow.add_text("")
@@ -449,7 +200,8 @@ class PyLakeClient():
             self.OutputWindow.add_text("    --> '%p3' : tag unit ")
             self.OutputWindow.add_text("    --> '%p4' : tag description ")
             self.OutputWindow.add_text("    --> '%p5' : tag title ")
-            self.OutputWindow.add_text("    --> '%p6' : tag directory, if none existing, it is created, it is optionnal ")
+            self.OutputWindow.add_text(
+                "    --> '%p6' : tag directory, if none existing, it is created, it is optionnal ")
             self.OutputWindow.add_text("    --> Return: the new tag characteristics are returned")
             self.OutputWindow.add_text("")
             self.OutputWindow.add_text("cmd 'ssc :%p1 :%p2 :%p3':", color=3, attribute=A_UNDERLINE)
@@ -472,7 +224,8 @@ class PyLakeClient():
             self.OutputWindow.add_text("")
             self.OutputWindow.add_text("    --> add values where: ")
             self.OutputWindow.add_text("    --> '%p1' : tag name ")
-            self.OutputWindow.add_text("    --> '%p2' : list of list(time,value) with format [['2015-01-01 00:04:00',75],['2015-01-01 00:05:00',67]]")
+            self.OutputWindow.add_text(
+                "    --> '%p2' : list of list(time,value) with format [['2015-01-01 00:04:00',75],['2015-01-01 00:05:00',67]]")
             self.OutputWindow.add_text("    --> '%p3' : optionnal directory ")
             self.OutputWindow.add_text("")
             self.OutputWindow.add_text("cmd 'gv :%p1 :%p2 :%p3 :%p4'", color=3, attribute=A_UNDERLINE)
@@ -483,7 +236,8 @@ class PyLakeClient():
             self.OutputWindow.add_text("    --> '%p3' : End time, format: yyyy-mm-dd hh:mm:ss ")
             self.OutputWindow.add_text("    --> '%p4' : optionnal directory where the tag is ")
             self.OutputWindow.add_text("    --> Return: list of time,value: [(t1,v1),(t2,v2),...]")
-            self.OutputWindow.add_text("    --> alternative: if '%p1' is given alone, it return the complete historian content for '%p1'")
+            self.OutputWindow.add_text(
+                "    --> alternative: if '%p1' is given alone, it return the complete historian content for '%p1'")
             self.OutputWindow.add_text("")
             self.OutputWindow.add_text("cmd 'dts :%p1 :%p2'", color=3, attribute=A_UNDERLINE)
             self.OutputWindow.add_text("")
@@ -501,7 +255,8 @@ class PyLakeClient():
             self.OutputWindow.add_text("")
             self.OutputWindow.add_text("    --> truncate tags")
             self.OutputWindow.add_text("    --> '%p1' : tag names list, format: ['tagname1','tagname2',...] ")
-            self.OutputWindow.add_text("    --> '%p2' : time from which all data must be deleted, format: yyyy-mm-dd hh:mm:ss")
+            self.OutputWindow.add_text(
+                "    --> '%p2' : time from which all data must be deleted, format: yyyy-mm-dd hh:mm:ss")
             self.OutputWindow.add_text("    --> '%p3' : optionnal directory where the tags are ")
             self.OutputWindow.add_text("")
             self.OutputWindow.add_text("cmd 'gmd :%p1 :%p2'", color=3, attribute=A_UNDERLINE)
@@ -517,29 +272,29 @@ class PyLakeClient():
             self.OutputWindow.add_text("    --> '%p2' : optionnal directory where the tags are ")
 
             """to allow again the display object to run"""
-            self.OutputWindow.quitRequest=True
+            self.OutputWindow.quitRequest = True
 
-        elif cmdlist[0] == "gd":   #get driectories
+        elif cmdlist[0] == "gd":  # get driectories
             self.OutputWindow.clear_display()
             self.OutputWindow.add_text("GET DIRECTORIES", color=2, attribute=A_BOLD + A_UNDERLINE)
             self.OutputWindow.add_text("")
 
             """retrieve param"""
             """manage if user send no specific directory"""
-            if len(cmdlist)==1:
+            if len(cmdlist) == 1:
                 cmdlist.append("")
             """normally every cmd should be two comp"""
-            if len(cmdlist)==2:
-                DirList = self.MyLake.get_tag_directories(TagDirParam="{}/{}".format("wintell",cmdlist[1]))
+            if len(cmdlist) == 2:
+                DirList = self.MyLake.get_tag_directories(TagDirParam="{}/{}".format("wintell", cmdlist[1]))
                 if DirList != False:
                     self.OutputWindow.add_text("    --> wintell")
                     for elt in DirList:
-                        finalStr=""
-                        eltSplit=elt.split('/')
+                        finalStr = ""
+                        eltSplit = elt.split('/')
                         for elt2 in eltSplit:
                             finalStr += "    "
 
-                        self.OutputWindow.add_text("{}--> {}".format(finalStr,eltSplit[len(eltSplit)-1]))
+                        self.OutputWindow.add_text("{}--> {}".format(finalStr, eltSplit[len(eltSplit) - 1]))
                 else:
                     self.OutputWindow.add_text("    !! CONNECTION ERROR WITH SERVER !!", color=2)
 
@@ -549,27 +304,27 @@ class PyLakeClient():
             """to allow again the display object to run"""
             self.OutputWindow.quitRequest = True
 
-        elif cmdlist[0] == "gtl":   #get tag list
+        elif cmdlist[0] == "gtl":  # get tag list
             self.OutputWindow.clear_display()
             self.OutputWindow.add_text("GET TAG LIST", color=2, attribute=A_BOLD + A_UNDERLINE)
             self.OutputWindow.add_text("")
 
             """retrieve param"""
             """manage if user send no specific directory"""
-            if len(cmdlist)==1:
+            if len(cmdlist) == 1:
                 cmdlist.append(self.MyLake.DefaultDir)
             """normally every cmd should be two comp"""
-            if len(cmdlist)==2:
+            if len(cmdlist) == 2:
                 TagList = self.MyLake.get_tag_list(TagDirParam="{}".format(cmdlist[1]))
                 if TagList != False:
                     self.OutputWindow.add_text("--> {}".format(self.MyLake.DefaultDir))
                     for elt in TagList:
-                        finalStr=""
-                        eltSplit=elt.split('/')
+                        finalStr = ""
+                        eltSplit = elt.split('/')
                         for elt2 in eltSplit:
                             finalStr += "    "
 
-                        self.OutputWindow.add_text("{}--> {}".format(finalStr,eltSplit[len(eltSplit)-1]))
+                        self.OutputWindow.add_text("{}--> {}".format(finalStr, eltSplit[len(eltSplit) - 1]))
                 else:
                     self.OutputWindow.add_text("    !! CONNECTION ERROR WITH SERVER !!", color=2)
 
@@ -579,23 +334,24 @@ class PyLakeClient():
             """to allow again the display object to run"""
             self.OutputWindow.quitRequest = True
 
-        elif cmdlist[0] == "gv":   #get tag list
+        elif cmdlist[0] == "gv":  # get tag list
             self.OutputWindow.clear_display()
             self.OutputWindow.add_text("GET TAG VALUES", color=2, attribute=A_BOLD + A_UNDERLINE)
             self.OutputWindow.add_text("")
 
             """manage if just tag given"""
-            if len(cmdlist)==2:
+            if len(cmdlist) == 2:
                 cmdlist.append("1970-01-01 01:00:00")
                 cmdlist.append(get_utc_now(ReturnFormat="string"))
                 cmdlist.append(self.MyLake.DefaultDir)
 
             """manage if user send no specific directory"""
-            if len(cmdlist)==4:
+            if len(cmdlist) == 4:
                 cmdlist.append(self.MyLake.DefaultDir)
             """normally every cmd should be two comp"""
-            if len(cmdlist)==5:
-                TagList = self.MyLake.get_values(cmdlist[1],cmdlist[2],cmdlist[3],TagDirParam="{}".format(cmdlist[4]))
+            if len(cmdlist) == 5:
+                TagList = self.MyLake.get_values(cmdlist[1], cmdlist[2], cmdlist[3],
+                                                 TagDirParam="{}".format(cmdlist[4]))
                 if TagList != False:
                     self.OutputWindow.add_text("--> {}".format(self.MyLake.DefaultDir))
                     self.OutputWindow.add_text("    --> Get '{}'".format(cmdlist[1]))
@@ -603,7 +359,8 @@ class PyLakeClient():
                     self.OutputWindow.add_text("    --> to: {}".format(cmdlist[3]))
                     self.OutputWindow.add_text("")
                     for elt in TagList:
-                        self.OutputWindow.add_text("        {} || {}".format(utc_to_string(int(elt[0]/1000)),elt[1]), color=6, attribute=A_BOLD)
+                        self.OutputWindow.add_text("        {} || {}".format(utc_to_string(int(elt[0] / 1000)), elt[1]),
+                                                   color=6, attribute=A_BOLD)
                 else:
                     self.OutputWindow.add_text("    !! CONNECTION ERROR WITH SERVER !!", color=2)
 
@@ -613,25 +370,25 @@ class PyLakeClient():
             """to allow again the display object to run"""
             self.OutputWindow.quitRequest = True
 
-        elif cmdlist[0] == "btd":   #get tag list
+        elif cmdlist[0] == "btd":  # get tag list
             self.OutputWindow.clear_display()
             self.OutputWindow.add_text("BROWSE TAG DIRECTORY", color=2, attribute=A_BOLD + A_UNDERLINE)
             self.OutputWindow.add_text("")
 
             """retrieve param"""
             """manage if user send no specific directory"""
-            if len(cmdlist)==1:
+            if len(cmdlist) == 1:
                 cmdlist.append(self.MyLake.DefaultDir)
             """normally every cmd should be two comp"""
-            if len(cmdlist)==2:
+            if len(cmdlist) == 2:
                 TagDict = self.MyLake.browse_directory(TagDirParam="{}".format(cmdlist[1]))
                 if TagDict != False:
                     self.OutputWindow.add_text("--> {}".format(self.MyLake.DefaultDir))
                     for keyLevel1, eltLevel1 in TagDict.items():
-                        keyLevel1Split=keyLevel1.split("/")
-                        self.OutputWindow.add_text("    --> {}".format(keyLevel1Split[len(keyLevel1Split)-1]))
-                        for keyLevel2,eltLevel2 in eltLevel1.items():
-                            self.OutputWindow.add_text("        --> {} : '{}'".format(keyLevel2,eltLevel2))
+                        keyLevel1Split = keyLevel1.split("/")
+                        self.OutputWindow.add_text("    --> {}".format(keyLevel1Split[len(keyLevel1Split) - 1]))
+                        for keyLevel2, eltLevel2 in eltLevel1.items():
+                            self.OutputWindow.add_text("        --> {} : '{}'".format(keyLevel2, eltLevel2))
                 else:
                     self.OutputWindow.add_text("    !! CONNECTION ERROR WITH SERVER !!", color=2)
 
@@ -641,23 +398,23 @@ class PyLakeClient():
             """to allow again the display object to run"""
             self.OutputWindow.quitRequest = True
 
-        elif cmdlist[0] == "av":   #add value
+        elif cmdlist[0] == "av":  # add value
             self.OutputWindow.clear_display()
             self.OutputWindow.add_text("ADD VALUE", color=2, attribute=A_BOLD + A_UNDERLINE)
             self.OutputWindow.add_text("")
 
             """retrieve param"""
             """manage if user send no specific directory"""
-            if len(cmdlist)==4:
+            if len(cmdlist) == 4:
                 cmdlist.append(self.MyLake.DefaultDir)
             """normally every cmd should be two comp"""
-            if len(cmdlist)==5:
+            if len(cmdlist) == 5:
                 self.OutputWindow.add_text("    --> Try  to insert in directory: {}".format(cmdlist[4]))
                 self.OutputWindow.add_text("        --> Tag name: {}".format(cmdlist[1]))
                 self.OutputWindow.add_text("        --> Time : {}".format(cmdlist[2]))
                 self.OutputWindow.add_text("        --> Value: {}".format(cmdlist[3]))
                 if self.MyLake.add_value(cmdlist[1], cmdlist[2], cmdlist[3], TagDirParam="{}".format(cmdlist[4])):
-                    self.OutputWindow.add_text("    --> Successfully injected",color=6)
+                    self.OutputWindow.add_text("    --> Successfully injected", color=6)
                 else:
                     self.OutputWindow.add_text("    !! CONNECTION ERROR WITH SERVER OR INPUT FORMAT WRONG !!", color=2)
 
@@ -667,20 +424,20 @@ class PyLakeClient():
             """to allow again the display object to run"""
             self.OutputWindow.quitRequest = True
 
-        elif cmdlist[0] == "gmd":   #add value
+        elif cmdlist[0] == "gmd":  # add value
             self.OutputWindow.clear_display()
             self.OutputWindow.add_text("GET TAG METADATAS", color=2, attribute=A_BOLD + A_UNDERLINE)
             self.OutputWindow.add_text("")
 
             """retrieve param"""
             """manage if user send no specific directory"""
-            if len(cmdlist)==2:
+            if len(cmdlist) == 2:
                 cmdlist.append(self.MyLake.DefaultDir)
             """normally every cmd should be two comp"""
-            if len(cmdlist)==3:
+            if len(cmdlist) == 3:
                 self.OutputWindow.add_text("    --> get metadatas in directory: {}".format(cmdlist[2]))
                 self.OutputWindow.add_text("        --> Tag name: {}".format(cmdlist[1]))
-                MData=self.MyLake.get_tag_metadata_get(cmdlist[1],TagDirParam=cmdlist[2])
+                MData = self.MyLake.get_tag_metadata_get(cmdlist[1], TagDirParam=cmdlist[2])
                 if MData != False:
                     for key, item in MData[0].items():
                         self.OutputWindow.add_text("            --> {}: {}".format(key, item), color=6)
@@ -693,26 +450,27 @@ class PyLakeClient():
             """to allow again the display object to run"""
             self.OutputWindow.quitRequest = True
 
-        elif cmdlist[0] == "avs":   #add value
+        elif cmdlist[0] == "avs":  # add value
             self.OutputWindow.clear_display()
             self.OutputWindow.add_text("ADD VALUES", color=2, attribute=A_BOLD + A_UNDERLINE)
             self.OutputWindow.add_text("")
 
             """retrieve param"""
             """manage if user send no specific directory"""
-            if len(cmdlist)==3:
+            if len(cmdlist) == 3:
                 cmdlist.append(self.MyLake.DefaultDir)
             """normally every cmd should be two comp"""
-            if len(cmdlist)==4:
+            if len(cmdlist) == 4:
                 self.OutputWindow.add_text("    --> Try  to insert in directory: {}".format(cmdlist[3]))
                 self.OutputWindow.add_text("        --> Tag name: {}".format(cmdlist[1]))
                 self.OutputWindow.add_text("        --> Values: {}".format(cmdlist[2]))
-                ValuesList=string_to_list_tuple_dict(cmdlist[2])
+                ValuesList = string_to_list_tuple_dict(cmdlist[2])
                 if ValuesList != False:
                     if self.MyLake.add_values(cmdlist[1], ValuesList, TagDirParam="{}".format(cmdlist[3])):
-                        self.OutputWindow.add_text("    --> Successfully injected",color=6)
+                        self.OutputWindow.add_text("    --> Successfully injected", color=6)
                     else:
-                        self.OutputWindow.add_text("    !! CONNECTION ERROR WITH SERVER OR INPUT FORMAT WRONG !!", color=2)
+                        self.OutputWindow.add_text("    !! CONNECTION ERROR WITH SERVER OR INPUT FORMAT WRONG !!",
+                                                   color=2)
                 else:
                     self.OutputWindow.add_text("    !! LIST CONVERSION NOT POSSIBLE !!", color=2)
 
@@ -722,25 +480,26 @@ class PyLakeClient():
             """to allow again the display object to run"""
             self.OutputWindow.quitRequest = True
 
-        elif cmdlist[0] == "dts":   #add value
+        elif cmdlist[0] == "dts":  # add value
             self.OutputWindow.clear_display()
             self.OutputWindow.add_text("DELETE TAGS", color=2, attribute=A_BOLD + A_UNDERLINE)
             self.OutputWindow.add_text("")
 
             """retrieve param"""
             """manage if user send no specific directory"""
-            if len(cmdlist)==2:
+            if len(cmdlist) == 2:
                 cmdlist.append(self.MyLake.DefaultDir)
             """normally every cmd should be two comp"""
-            if len(cmdlist)==3:
-                TagListToDelete=string_to_list_tuple_dict(cmdlist[1])
+            if len(cmdlist) == 3:
+                TagListToDelete = string_to_list_tuple_dict(cmdlist[1])
                 if TagListToDelete != False:
                     self.OutputWindow.add_text("    --> Try to delete in directory: {}".format(cmdlist[2]))
                     self.OutputWindow.add_text("        --> Tag names: {}".format(cmdlist[1]))
                     if self.MyLake.delete_tags(TagListToDelete, TagDirParam=cmdlist[2]):
-                        self.OutputWindow.add_text("    --> Successfully deleted",color=6)
+                        self.OutputWindow.add_text("    --> Successfully deleted", color=6)
                     else:
-                        self.OutputWindow.add_text("    !! CONNECTION ERROR WITH SERVER OR INPUT FORMAT WRONG !!", color=2)
+                        self.OutputWindow.add_text("    !! CONNECTION ERROR WITH SERVER OR INPUT FORMAT WRONG !!",
+                                                   color=2)
 
                 else:
                     self.OutputWindow.add_text("    !! INPUT TAGLIST WRONG FORMAT !!", color=2)
@@ -751,29 +510,30 @@ class PyLakeClient():
             """to allow again the display object to run"""
             self.OutputWindow.quitRequest = True
 
-        elif cmdlist[0] == "gmds":   #add value
+        elif cmdlist[0] == "gmds":  # add value
             self.OutputWindow.clear_display()
             self.OutputWindow.add_text("GET TAGS METADATAS", color=2, attribute=A_BOLD + A_UNDERLINE)
             self.OutputWindow.add_text("")
 
             """retrieve param"""
             """manage if user send no specific directory"""
-            if len(cmdlist)==2:
+            if len(cmdlist) == 2:
                 cmdlist.append(self.MyLake.DefaultDir)
             """normally every cmd should be two comp"""
-            if len(cmdlist)==3:
-                TagListToGet=string_to_list_tuple_dict(cmdlist[1])
+            if len(cmdlist) == 3:
+                TagListToGet = string_to_list_tuple_dict(cmdlist[1])
                 if TagListToGet != False:
                     self.OutputWindow.add_text("    --> Try to Retrieve MetaDatas in directory: {}".format(cmdlist[2]))
                     self.OutputWindow.add_text("        --> Tag names: {}".format(cmdlist[1]))
-                    MDatas=self.MyLake.get_tag_metadata_post(TagListToGet,TagDirParam=cmdlist[2])
+                    MDatas = self.MyLake.get_tag_metadata_post(TagListToGet, TagDirParam=cmdlist[2])
                     if MDatas != False:
                         for elt in MDatas:
                             self.OutputWindow.add_text("")
-                            for key,item in elt.items():
-                                self.OutputWindow.add_text("            --> {}: {}".format(key,item), color=6)
+                            for key, item in elt.items():
+                                self.OutputWindow.add_text("            --> {}: {}".format(key, item), color=6)
                     else:
-                        self.OutputWindow.add_text("    !! CONNECTION ERROR WITH SERVER OR INPUT FORMAT WRONG !!", color=2)
+                        self.OutputWindow.add_text("    !! CONNECTION ERROR WITH SERVER OR INPUT FORMAT WRONG !!",
+                                                   color=2)
 
                 else:
                     self.OutputWindow.add_text("    !! INPUT TAGLIST WRONG FORMAT !!", color=2)
@@ -784,26 +544,27 @@ class PyLakeClient():
             """to allow again the display object to run"""
             self.OutputWindow.quitRequest = True
 
-        elif cmdlist[0] == "tt":   #truncate tags
+        elif cmdlist[0] == "tt":  # truncate tags
             self.OutputWindow.clear_display()
             self.OutputWindow.add_text("TRUNCATE TAGS", color=2, attribute=A_BOLD + A_UNDERLINE)
             self.OutputWindow.add_text("")
 
             """retrieve param"""
             """manage if user send no specific directory"""
-            if len(cmdlist)==3:
+            if len(cmdlist) == 3:
                 cmdlist.append(self.MyLake.DefaultDir)
             """normally every cmd should be two comp"""
-            if len(cmdlist)==4:
-                TagListToDelete=string_to_list_tuple_dict(cmdlist[1])
+            if len(cmdlist) == 4:
+                TagListToDelete = string_to_list_tuple_dict(cmdlist[1])
                 if TagListToDelete != False:
                     self.OutputWindow.add_text("    --> Try to truncate in directory: {}".format(cmdlist[3]))
                     self.OutputWindow.add_text("        --> Tag names: {}".format(cmdlist[1]))
                     self.OutputWindow.add_text("        --> From: {}".format(cmdlist[2]))
                     if self.MyLake.truncate_tags(TagListToDelete, cmdlist[2], TagDirParam=cmdlist[3]):
-                        self.OutputWindow.add_text("    --> Successfully truncated",color=6)
+                        self.OutputWindow.add_text("    --> Successfully truncated", color=6)
                     else:
-                        self.OutputWindow.add_text("    !! CONNECTION ERROR WITH SERVER OR INPUT FORMAT WRONG !!", color=2)
+                        self.OutputWindow.add_text("    !! CONNECTION ERROR WITH SERVER OR INPUT FORMAT WRONG !!",
+                                                   color=2)
 
                 else:
                     self.OutputWindow.add_text("    !! INPUT TAGLIST WRONG FORMAT !!", color=2)
@@ -814,7 +575,7 @@ class PyLakeClient():
             """to allow again the display object to run"""
             self.OutputWindow.quitRequest = True
 
-        elif cmdlist[0] == "at":   #add tag
+        elif cmdlist[0] == "at":  # add tag
             self.OutputWindow.clear_display()
             self.OutputWindow.add_text("ADD TAG", color=2, attribute=A_BOLD + A_UNDERLINE)
             self.OutputWindow.add_text("")
@@ -826,13 +587,15 @@ class PyLakeClient():
                 cmdlist.append(self.MyLake.DefaultDir)
 
             """manage if user send no parameter"""
-            if len(cmdlist)<6:
+            if len(cmdlist) < 6:
                 self.OutputWindow.add_text("    !! WRONG FORMAT, CONSULT HELP !!", color=2)
 
-            elif len(cmdlist)==7: #no default dir given
-                TagList = self.MyLake.create_tags(cmdlist[1], TagType=cmdlist[2], TagUnit=cmdlist[3], TagDescription=cmdlist[4], TagTitle=cmdlist[5], TagDirParam="{}".format(cmdlist[6]))
+            elif len(cmdlist) == 7:  # no default dir given
+                TagList = self.MyLake.create_tags(cmdlist[1], TagType=cmdlist[2], TagUnit=cmdlist[3],
+                                                  TagDescription=cmdlist[4], TagTitle=cmdlist[5],
+                                                  TagDirParam="{}".format(cmdlist[6]))
                 if TagList != False:
-                    self.OutputWindow.add_text("    --> New tag '{}' in directory '{}'".format(cmdlist[1],cmdlist[6]))
+                    self.OutputWindow.add_text("    --> New tag '{}' in directory '{}'".format(cmdlist[1], cmdlist[6]))
                     self.OutputWindow.add_text("        --> Unit: '{}'".format(cmdlist[2]))
                     self.OutputWindow.add_text("        --> Type: '{}'".format(cmdlist[3]))
                     self.OutputWindow.add_text("        --> Description: '{}'".format(cmdlist[4]))
@@ -847,9 +610,9 @@ class PyLakeClient():
             self.OutputWindow.quitRequest = True
 
             """to update tagmemory"""
-            self.TagMemory=TagMemory(self.MyLake.browse_directory())
+            self.TagMemory = TagMemory(self.MyLake.browse_directory())
 
-        elif cmdlist[0] == "sdd":   #set default directory
+        elif cmdlist[0] == "sdd":  # set default directory
             self.OutputWindow.clear_display()
             self.OutputWindow.add_text("SET DEFAULT DIRECTORY", color=2, attribute=A_BOLD + A_UNDERLINE)
             self.OutputWindow.add_text("")
@@ -857,9 +620,9 @@ class PyLakeClient():
             """retrieve param"""
 
             """normally every cmd should be two comp"""
-            if len(cmdlist)==2:
+            if len(cmdlist) == 2:
                 self.OutputWindow.add_text("   --> Former directory: {}".format(self.MyLake.DefaultDir))
-                self.MyLake.DefaultDir=cmdlist[1]
+                self.MyLake.DefaultDir = cmdlist[1]
                 self.OutputWindow.add_text("   --> new directory set: {}".format(self.MyLake.DefaultDir))
 
             else:
@@ -871,7 +634,7 @@ class PyLakeClient():
             """to update tagmemory"""
             self.TagMemory = TagMemory(self.MyLake.browse_directory())
 
-        elif cmdlist[0] == "ssc":   #set default directory
+        elif cmdlist[0] == "ssc":  # set default directory
             self.OutputWindow.clear_display()
             self.OutputWindow.add_text("SET SESSION CREDENTIALS", color=2, attribute=A_BOLD + A_UNDERLINE)
             self.OutputWindow.add_text("")
@@ -879,9 +642,9 @@ class PyLakeClient():
             """retrieve param"""
 
             """normally every cmd should be two comp"""
-            if len(cmdlist)==4:
+            if len(cmdlist) == 4:
                 self.OutputWindow.add_text("   --> User name and password changed successfully")
-                self.MyLake.Session.auth = (cmdlist[1],cmdlist[2])
+                self.MyLake.Session.auth = (cmdlist[1], cmdlist[2])
                 self.MyLake.UrlIp = "https://{}/tags/".format(cmdlist[3])
                 self.OutputWindow.add_text("   --> new DMLake url set: {}".format(self.MyLake.UrlIp))
 
@@ -891,15 +654,17 @@ class PyLakeClient():
             """to allow again the display object to run"""
             self.OutputWindow.quitRequest = True
 
-        elif cmdlist[0] == "ad":   #add directory
+        elif cmdlist[0] == "ad":  # add directory
             self.OutputWindow.clear_display()
             self.OutputWindow.add_text("ADD DIRECTORY", color=2, attribute=A_BOLD + A_UNDERLINE)
             self.OutputWindow.add_text("")
 
             """check parameter is there"""
-            if len(cmdlist)==2:
+            if len(cmdlist) == 2:
                 if self.MyLake.create_directory(cmdlist[1]):
-                    self.OutputWindow.add_text("    --> Directory '{}' has been created successfully".format(cmdlist[1]), color=6)
+                    self.OutputWindow.add_text(
+                        "    --> Directory '{}' has been created successfully".format(cmdlist[1]),
+                        color=6)
                 else:
                     self.OutputWindow.add_text("    !! CONNECTION ERROR WITH SERVER !!", color=2)
             else:
@@ -919,8 +684,12 @@ class PyLakeClient():
             self.OutputWindow.quitRequest = True
 
 
-
 def string_to_list_tuple_dict(s):
+    """
+    fct to convert string into dict, list, tuple
+    :param s: the string to convert
+    :return: false if error, the list,tuple,dicct if ok
+    """
     try:
         ret=ast.literal_eval(s)
     except:
