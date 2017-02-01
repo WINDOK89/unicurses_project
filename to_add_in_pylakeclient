@@ -14,3 +14,10 @@ self.ChoiceWindow = DisplayWindow(self.stdscr, self.InputWindow)
 self.DirChoiceWindow = DisplayWindow(self.stdscr, self.InputWindow)
 
 """redefine start loop
+
+""" to put before manager buffer
+"""to displlay at top display screen"""
+        top_panel(self.OutputWindow.panel)
+        bottom_panel(self.ChoiceWindow.panel)
+        bottom_panel(self.DirChoiceWindow.panel)
+        self.OutputWindow.show_changes()
