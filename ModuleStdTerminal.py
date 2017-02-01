@@ -80,12 +80,6 @@ class StandardTerminal():
         else:
             self.OutputWindow=OutputWindow
 
-        """start loop"""
-        self.start_loop()
-
-        """terminate app if loop over"""
-        endwin()
-
     def start_loop(self):
         """
         this function will start a loop
@@ -97,6 +91,9 @@ class StandardTerminal():
             self.manage_buffer(key)
             mvaddstr(0, 0, "   ")
             mvaddstr(0, 0, str(key))
+
+        """terminate app if loop over"""
+        endwin()
 
     def manage_buffer(self, key):
         """

@@ -38,12 +38,8 @@ class PyLakeClient(StandardTerminal):
         contructor, we start first with specific variable of child class
         """
 
-        """init main screen"""
-        self.stdscr = initscr()
-        mvaddstr(1, 0, " dfdqsdqfdqfqdf  ")
-
-        """cmd window init"""
-        self.InputWindow = CmdWindow(self.stdscr)
+        """call to inherit constructor"""
+        StandardTerminal.__init__(self)
 
         """get PyLakeDDriver connection"""
         self.MyLake=PyLakeDriver("wintell", "wintell347", "148.251.51.21", DefaultDir="wintell/SR4")
@@ -58,11 +54,13 @@ class PyLakeClient(StandardTerminal):
         """dir choice manager"""
         self.DirChoiceWindow = DisplayWindow(self.stdscr, self.InputWindow)
 
-        """output window"""
-        self.OutputWindow = DisplayWindow(self.stdscr, self.InputWindow)
+        """arrange element"""
+        top_panel(self.OutputWindow.panel)
+        bottom_panel(self.ChoiceWindow.panel)
+        bottom_panel(self.DirChoiceWindow.panel)
 
-        """call to inherit constructor"""
-        StandardTerminal.__init__(self, stdscr=self.stdscr, InputWindow=self.InputWindow)
+        """start loop"""
+        self.start_loop()
 
     def start_loop(self):
         """
@@ -75,6 +73,9 @@ class PyLakeClient(StandardTerminal):
             self.manage_buffer(key)
             mvaddstr(0, 0, "   ")
             mvaddstr(0, 0, str(key))
+
+        """terminate app if loop over"""
+        endwin()
 
 
 def string_to_list_tuple_dict(s):
