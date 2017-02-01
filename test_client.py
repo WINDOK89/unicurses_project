@@ -39,6 +39,7 @@ class PyLakeClient():
         """
 
         stdTerminal=StandardTerminal()
+        stdTerminal.start_loop()
 
     def start_loop(self):
         """
