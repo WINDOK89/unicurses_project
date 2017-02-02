@@ -3,6 +3,9 @@ import ast
 from unicurses import *
 from PyLakeDriver import *
 from ModuleStdTerminal import *
+from ModulePyPowerCurveAgent import *
+import matplotlib.pyplot as plt
+
 
 class TagMemory(DirMemory):
     """
@@ -43,7 +46,7 @@ class PyLakeClient(StandardTerminal):
         StandardTerminal.__init__(self)
 
         """get PyLakeDDriver connection"""
-        self.MyLake=PyLakeDriver("wintell", "wintell347", "148.251.51.21", DefaultDir="wintell/SR4")
+        self.MyLake=PyLakeDriver("wintell", "wintell347", "148.251.51.21", DefaultDir="wintell/SR4/PCAgent")
 
         """set memory for tag"""
         self.TagMemory=TagMemory(self.MyLake.browse_directory())
@@ -676,6 +679,201 @@ class PyLakeClient(StandardTerminal):
             """to update tagmemory"""
             self.DirMemory = DirMemory(self.MyLake.get_tag_directories())
 
+        elif cmdlist[0] == "plot":
+            """plot power curve and model"""
+            if len(cmdlist)==1:
+                cmdlist.append(0.27998)
+                cmdlist.append(0.3878)
+                cmdlist.append(0.4604)
+                cmdlist.append("2007-01-18 00:20:00")
+                cmdlist.append("2017-01-31 00:00:00")
+
+            if len(cmdlist)==6:
+                powerList = self.MyLake.get_values("power", cmdlist[4], cmdlist[5])
+                ylist = []
+
+                SpeedList = self.MyLake.get_values("speed",cmdlist[4], cmdlist[5])
+                xlist = []
+                try:
+                    for i, elt in enumerate(SpeedList):
+                        if utc_to_string(powerList[i][0] / 1000) == utc_to_string(elt[0] / 1000):
+                            ylist.append(powerList[i][1])
+                            xlist.append(elt[1])
+                        else:
+                            pass
+                except:
+                    pass
+
+                PowerModelList=[]
+                for elt in xlist:
+                    PowerModelList.append(get_power_model(elt, Omega=float(cmdlist[1]), Ksi=float(cmdlist[2]), AFactor=float(cmdlist[3])))
+
+                #csv
+                with open("export.csv",'a') as mf:
+                    for i,elt in enumerate(xlist):
+                        mf.write("{};{}\n".format(elt,ylist[i]))
+
+                plt.ylabel("Power (Kw)")
+                plt.xlabel("Wind Speed (m/s)")
+                plt.grid()
+                plt.axis([0,20,-20,2000])
+                plt.plot(xlist, ylist, 'r.')
+                plt.plot(xlist, PowerModelList, 'b.')
+                plt.show()
+            else:
+                pass
+
+        elif cmdlist[0] == "plotR":
+            """plot residual"""
+            if len(cmdlist)==1:
+                cmdlist.append(0.27998)
+                cmdlist.append(0.3878)
+                cmdlist.append(0.4604)
+                cmdlist.append("2007-01-18 00:20:00")
+                cmdlist.append("2017-01-31 00:00:00")
+
+            if len(cmdlist)==6:
+                powerList = self.MyLake.get_values("power", cmdlist[4], cmdlist[5])
+                ylist = []
+
+                SpeedList = self.MyLake.get_values("speed",cmdlist[4], cmdlist[5])
+                xlist = []
+                try:
+                    for i, elt in enumerate(SpeedList):
+                        if utc_to_string(powerList[i][0] / 1000) == utc_to_string(elt[0] / 1000):
+                            ylist.append(powerList[i][1])
+                            xlist.append(elt[1])
+                        else:
+                            pass
+                except:
+                    pass
+
+                PowerModelList=[]
+                for elt in xlist:
+                    PowerModelList.append(get_power_model(elt, Omega=float(cmdlist[1]), Ksi=float(cmdlist[2]), AFactor=float(cmdlist[3])))
+
+                # #csv
+                # with open("export.csv",'a') as mf:
+                #     for i,elt in enumerate(xlist):
+                #         mf.write("{};{}\n".format(elt,ylist[i]))
+
+                ResList=get_residual(PowerModelList, ylist)
+
+                plt.ylabel("Power (Kw)")
+                plt.xlabel("Wind Speed (m/s)")
+                plt.grid()
+                #plt.axis([0,20,-20,2000])
+                plt.plot(xlist, ResList, 'r.')
+                plt.show()
+            else:
+                pass
+
+        elif cmdlist[0] == "plotRR":
+            """plot relevant residual"""
+            if len(cmdlist) == 1:
+                cmdlist.append(0.27998)
+                cmdlist.append(0.3878)
+                cmdlist.append(0.4604)
+                cmdlist.append("2007-01-18 00:20:00")
+                cmdlist.append("2017-01-31 00:00:00")
+
+            if len(cmdlist) == 6:
+                powerList = self.MyLake.get_values("power", cmdlist[4], cmdlist[5])
+                ylist = []
+
+                SpeedList = self.MyLake.get_values("speed", cmdlist[4], cmdlist[5])
+                xlist = []
+                try:
+                    for i, elt in enumerate(SpeedList):
+                        if utc_to_string(powerList[i][0] / 1000) == utc_to_string(elt[0] / 1000):
+                            ylist.append(powerList[i][1])
+                            xlist.append(elt[1])
+                        else:
+                            pass
+                except:
+                    pass
+
+                PowerModelList = []
+                for elt in xlist:
+                    PowerModelList.append(
+                        get_power_model(elt, Omega=float(cmdlist[1]), Ksi=float(cmdlist[2]), AFactor=float(cmdlist[3])))
+
+                # #csv
+                # with open("export.csv",'a') as mf:
+                #     for i,elt in enumerate(xlist):
+                #         mf.write("{};{}\n".format(elt,ylist[i]))
+
+                ResList = get_residual(PowerModelList, ylist)
+                ResListRelevant, VListRelevant = get_relevant_residual(ylist,ResList,xlist)
+
+                plt.ylabel("Power (Kw)")
+                plt.xlabel("Wind Speed (m/s)")
+                plt.grid()
+                # plt.axis([0,20,-20,2000])
+                plt.plot(VListRelevant, ResListRelevant, 'r.')
+                plt.show()
+            else:
+                pass
+
+        elif cmdlist[0] == "plotRRD":
+            """plot decision"""
+            if len(cmdlist) == 1:
+                cmdlist.append(0.27998)
+                cmdlist.append(0.3878)
+                cmdlist.append(0.4604)
+                cmdlist.append("2007-01-18 00:20:00")
+                cmdlist.append("2017-01-31 00:00:00")
+
+            if len(cmdlist) == 6:
+                powerList = self.MyLake.get_values("power", cmdlist[4], cmdlist[5])
+                ylist = []
+
+                SpeedList = self.MyLake.get_values("speed", cmdlist[4], cmdlist[5])
+                xlist = []
+                try:
+                    for i, elt in enumerate(SpeedList):
+                        if utc_to_string(powerList[i][0] / 1000) == utc_to_string(elt[0] / 1000):
+                            ylist.append(powerList[i][1])
+                            xlist.append(elt[1])
+                        else:
+                            pass
+                except:
+                    pass
+
+                PowerModelList = []
+                for elt in xlist:
+                    PowerModelList.append(
+                        get_power_model(elt, Omega=float(cmdlist[1]), Ksi=float(cmdlist[2]), AFactor=float(cmdlist[3])))
+
+                # #csv
+                # with open("export.csv",'a') as mf:
+                #     for i,elt in enumerate(xlist):
+                #         mf.write("{};{}\n".format(elt,ylist[i]))
+
+                ResList = get_residual(PowerModelList, ylist)
+                ResListRelevant, VListRelevant = get_relevant_residual(ylist,ResList,xlist)
+
+                ResultList=[]
+                for i in range(1,len(ResListRelevant)):
+                    Dec=get_decision(ResListRelevant[:i])
+                    ResultList.append(Dec)
+
+                xlist=[]
+                ylist=[]
+
+                for i,elt in enumerate(ResultList):
+                    xlist.append(i)
+                    ylist.append(elt)
+
+                plt.ylabel("Power (Kw)")
+                plt.xlabel("Wind Speed (m/s)")
+                plt.grid()
+                # plt.axis([0,20,-20,2000])
+                plt.plot(xlist, ylist, 'r.')
+                plt.show()
+            else:
+                pass
+
         else:
             self.OutputWindow.clear_display()
             self.OutputWindow.add_text("    !! WRONG FORMAT, CONSULT HELP !!", color=2)
@@ -698,4 +896,4 @@ def string_to_list_tuple_dict(s):
         return ret
 
 if __name__ == "__main__":
-    a = PyLakeClient()
+    a=PyLakeClient()
