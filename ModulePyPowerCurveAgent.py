@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 """
 The nice way to work:
     - every 6 hours, we will make 36 (6 hours * 6 10min) decision calculation over the last 100 relevant values
+    - We will need a tag relevant residu
 """
 
 def get_power_model(WdSpeed10Min, Pn=1683, Vn=10.83, Ksi=0.38, Omega=0.27998, AFactor=0.46, PCons=-5):
