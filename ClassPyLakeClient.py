@@ -3,6 +3,7 @@ import ast
 from unicurses import *
 from PyLakeDriver import *
 from ModuleStdTerminal import *
+import matplotlib.pyplot as plt
 
 class TagMemory(DirMemory):
     """
@@ -675,6 +676,15 @@ class PyLakeClient(StandardTerminal):
 
             """to update tagmemory"""
             self.DirMemory = DirMemory(self.MyLake.get_tag_directories())
+
+        elif cmdlist[0] == "plot":
+            xlist=[1,2,3]
+            ylist=[1,4,9]
+            plt.ylabel("Power (Kw)")
+            plt.xlabel("Wind Speed (m/s)")
+            plt.plot(xlist, ylist, 'r.')
+            plt.show()
+
 
         else:
             self.OutputWindow.clear_display()
